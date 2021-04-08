@@ -15,7 +15,8 @@ import (
 )
 
 type Decrypter interface {
-	Decrypt(f io.Reader, w io.Writer) (map[string]interface{}, error)
+	Decrypt(f io.Reader, w io.Writer) error
+	Metadata(f io.Reader) (map[string]interface{}, error)
 }
 
 func NewDecrypter(opts DecrypterOptions) Decrypter {
@@ -48,17 +49,34 @@ type decrypter struct {
 	options DecrypterOptions
 }
 
-// Decrypt reads an encrypted file and writes it into an output writer after having decrypted it.
-// Depending on the file's metadata, Decrypt also decompresses the file and verifies its integrity.
-// If available the metadata are returned.
-func (d *decrypter) Decrypt(in io.Reader, out io.Writer) (map[string]interface{}, error) {
+// Metadata only reads the metadata of a file and then stops, returned a map and an error in
+// case of troubles.
+func (d *decrypter) Metadata(in io.Reader) (map[string]interface{}, error) {
 	objReader := encoding.NewReader(in)
 
 	// Starts reading the encrypted file and return a channel with data objects once the metadata
 	// have been read.
 	dataChan, err := objReader.DataChannel()
 	if err != nil {
-		return objReader.Metadata(), fmt.Errorf("error reading metadata: %w", err)
+		return nil, fmt.Errorf("error reading metadata: %w", err)
+	}
+
+	// Discard the data
+	for _ = range dataChan {
+	}
+	return objReader.Metadata(), nil
+}
+
+// Decrypt reads an encrypted file and writes it into an output writer after having decrypted it.
+// Depending on the file's metadata, Decrypt also decompresses the file and verifies its integrity.
+func (d *decrypter) Decrypt(in io.Reader, out io.Writer) error {
+	objReader := encoding.NewReader(in)
+
+	// Starts reading the encrypted file and return a channel with data objects once the metadata
+	// have been read.
+	dataChan, err := objReader.DataChannel()
+	if err != nil {
+		return fmt.Errorf("error reading metadata: %w", err)
 	}
 
 	// Pipe a hasher if we have information allowing us to verify its integrity.
@@ -90,7 +108,7 @@ func (d *decrypter) Decrypt(in io.Reader, out io.Writer) (map[string]interface{}
 			out, err = compression.NewLz4Builtin(out)
 		}
 		if err != nil {
-			return objReader.Metadata(), fmt.Errorf("unable to initialize the decompression: %w", err)
+			return fmt.Errorf("unable to initialize the decompression: %w", err)
 		}
 	} else {
 		log.Debug("Compression is disabled")
@@ -99,7 +117,7 @@ func (d *decrypter) Decrypt(in io.Reader, out io.Writer) (map[string]interface{}
 	// Retrieve the session key required to decrypt the data
 	sessionKey, err := retrieveSessionKey(d.options.Password, d.options.PrivateKey, objReader.Metadata())
 	if err != nil {
-		return objReader.Metadata(), fmt.Errorf("unable to initialize the decryption: %w", err)
+		return fmt.Errorf("unable to initialize the decryption: %w", err)
 	}
 
 	// Pipe a decrypter with this session key
@@ -109,18 +127,18 @@ func (d *decrypter) Decrypt(in io.Reader, out io.Writer) (map[string]interface{}
 	for data := range dataChan {
 		_, err = out.Write(data)
 		if err != nil {
-			return objReader.Metadata(), fmt.Errorf("error writing to output stream: %w", err)
+			return fmt.Errorf("error writing to output stream: %w", err)
 		}
 	}
 	if objReader.Error() != nil {
-		return objReader.Metadata(), fmt.Errorf("error while reading the encodings: %w", objReader.Error())
+		return fmt.Errorf("error while reading the encodings: %w", objReader.Error())
 	}
 
 	// Close and finish
 	if v, ok := out.(io.WriteCloser); ok {
 		err = v.Close()
 		if err != nil {
-			return objReader.Metadata(), fmt.Errorf("error while closing stream: %w", err)
+			return fmt.Errorf("error while closing stream: %w", err)
 		}
 	}
 
@@ -130,14 +148,14 @@ func (d *decrypter) Decrypt(in io.Reader, out io.Writer) (map[string]interface{}
 		expectedHash := objReader.Metadata()[encoding.MetadataFieldMd5Digest]
 		if actualFileDigest != expectedHash {
 			if !d.options.IgnoreChecksumMismatch {
-				return objReader.Metadata(), fmt.Errorf("file digest doesn't match (computed: '%s', read:'%s')", actualFileDigest, expectedHash)
+				return fmt.Errorf("file digest doesn't match (computed: '%s', read:'%s')", actualFileDigest, expectedHash)
 			}
 			log.Errorf("file digest doesn't match (computed: '%s', read:'%s')", actualFileDigest, expectedHash)
 		} else {
 			log.Debugf("Checksum matched: %s", actualFileDigest)
 		}
 	}
-	return objReader.Metadata(), nil
+	return nil
 }
 
 func retrieveSessionKey(password string, privateKey []byte, metadata map[string]interface{}) (sessionKey []byte, err error) {

@@ -12,12 +12,13 @@ import (
 
 func TestDecryptingFiles(t *testing.T) {
 	testCases := []struct {
-		givenFilepath   string
-		givenPassword   string
-		givenPrivateKey string
+		givenFilepath    string
+		givenPassword    string
+		givenPrivateKey  string
+		expectedMetadata string
 	}{
-		{"testdata/Mark.Twain-Tom.Sawyer.txt", testdata.FixturePassword, ""},
-		{"testdata/Mark.Twain-Tom.Sawyer.txt", "", testdata.FixturePrivateKey},
+		{"testdata/Mark.Twain-Tom.Sawyer.txt", testdata.FixturePassword, "", "24bde34ecb5632ac6637325e8a334a9c"},
+		{"testdata/Mark.Twain-Tom.Sawyer.txt", "", testdata.FixturePrivateKey, "24bde34ecb5632ac6637325e8a334a9c"},
 	}
 
 	for _, tc := range testCases {
@@ -39,11 +40,13 @@ func TestDecryptingFiles(t *testing.T) {
 			var outputDecrypted bytes.Buffer
 			d := NewDecrypter(opts)
 
-			_, err = d.Decrypt(bytes.NewReader(inputData), &outputDecrypted)
-
+			err = d.Decrypt(bytes.NewReader(inputData), &outputDecrypted)
 			assert.NoError(t, err)
 			assert.Equal(t, expectedOutputData, outputDecrypted.Bytes())
 
+			metadata, err := d.Metadata(bytes.NewReader(inputData))
+			assert.NoError(t, err)
+			assert.Equal(t, tc.expectedMetadata, metadata["file_md5"])
 		})
 	}
 }
