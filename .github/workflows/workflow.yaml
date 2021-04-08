@@ -1,0 +1,16 @@
+on: push
+name: test
+jobs:
+  checks:
+    name: run
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+
+    - name: run tests for library
+      uses: cedrickring/golang-action@1.6.0
+
+    - name: run tests for cli
+      uses: cedrickring/golang-action@1.6.0
+      env:
+        PROJECT_PATH: "./cli/synocrypto"
