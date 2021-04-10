@@ -69,7 +69,7 @@ They have at least one field named "type". Two values for "type" are supported:
 * "data":  then we have another field named "data" which contains actual encrypted data
 
 Usually, the objects are ordered as following in a file:
-* most of the metadata at the begining: this is necessary in order to initialize everyting required to decrypt the data
+* most of the metadata at the beginning: this is necessary in order to initialize everything required to decrypt the data
 * all the data
 * a last metadata which is the checksum of the file
 
@@ -82,7 +82,7 @@ type Reader interface {
 	// and the updated variable of the struct is updated
 	DataChannel() (chan []byte, error)
 
-	// Error() returns the last error that has occured when reading the stream through DataChannel()
+	// Error() returns the last error that has occurred when reading the stream through DataChannel()
 	Error() error
 
 	// Metadata() simply returns the metadata that have been read so far
