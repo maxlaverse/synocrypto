@@ -13,6 +13,8 @@ type lz4Builtin struct {
 	done chan error
 }
 
+// NewLz4Builtin returns a new lz4 decompressor based on
+// github.com/pierrec/lz4
 func NewLz4Builtin(out io.Writer) (io.WriteCloser, error) {
 	pr, pw := io.Pipe()
 	zr := lz4.NewReader(pr)

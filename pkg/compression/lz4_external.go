@@ -12,6 +12,9 @@ type lz4External struct {
 	pw  *io.PipeWriter
 }
 
+// NewLz4External returns a new LZ4 decompressor using an external
+// lz4 command. This command has to be installed manually prior
+// execution if not present.
 func NewLz4External(out io.Writer) (io.WriteCloser, error) {
 	cmd := exec.Command("lz4", "-d")
 	cmd.Stdout = out

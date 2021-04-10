@@ -8,38 +8,46 @@ import (
 	"github.com/maxlaverse/synocrypto/pkg/log"
 )
 
+/*
+   See ENCRYPTION.md for more information about the file format
+*/
+
 const (
-	// The field "MetadataFieldCompress" indicates if the file is compressed (int)
+	// MetadataFieldCompress indicates if the file is compressed (int)
 	MetadataFieldCompress = "compress"
 
-	// The field <MetadataFieldCompress" indicates if the file is encrypted (int)
+	// MetadataFieldEncrypt indicates if the file is encrypted (int)
 	MetadataFieldEncrypt = "encrypt"
 
-	// The field <MetadataFieldFilename" contains the original name of the file (string)
+	// MetadataFieldFilename contains the original name of the file (string)
 	MetadataFieldFilename = "file_name"
 
-	// The field "MetadataFieldDigest" contains the type of digest used to verify the file's consistency after
+	// MetadataFieldDigest contains the type of digest used to verify the file's consistency after
 	// decryption (e.g. md5)
 	MetadataFieldDigest = "digest"
 
-	// The field "MetadataFieldEncryptionKey1" contains the Session Key encrypted by password (base64 encoded)
-	MetadataFieldEncryptionKey1     = "enc_key1"
+	// MetadataFieldEncryptionKey1 contains the Session Key encrypted by password (base64 encoded)
+	MetadataFieldEncryptionKey1 = "enc_key1"
+
+	// MetadataFieldEncryptionKey1Hash contains the hash of the key encrypted in enc_key1
 	MetadataFieldEncryptionKey1Hash = "key1_hash"
 
-	// The field "MetadataFieldEncryptionKey1" contains the Session Key encrypted by private key (base64 encoded)
-	MetadataFieldEncryptionKey2     = "enc_key2"
+	// MetadataFieldEncryptionKey2 contains the Session Key encrypted by private key (base64 encoded)
+	MetadataFieldEncryptionKey2 = "enc_key2"
+
+	// MetadataFieldEncryptionKey2Hash contains the hash of the key encrypted in key2_hash
 	MetadataFieldEncryptionKey2Hash = "key2_hash"
 
-	// The field "MetadataFieldSalt" is the salt used for computing some hashes (e.g. encryption key 1, session key)
+	// MetadataFieldSalt is the salt used for computing some hashes (e.g. encryption key 1, session key)
 	MetadataFieldSalt = "salt"
 
-	// The field "MetadataFieldVersion" is the version of Cloud Sync used to encrypt the file
+	// MetadataFieldVersion is the version of Cloud Sync used to encrypt the file
 	MetadataFieldVersion = "version"
 
-	// The field "MetadataFieldSalt" is the hash of the session key used to actually encrypt the data
+	// MetadataFieldSessionKeyHash is the hash of the session key used to actually encrypt the data
 	MetadataFieldSessionKeyHash = "session_key_hash"
 
-	// The field "MetadataFieldSalt" contains the checksum of the file, once decrypted and decompressed
+	// MetadataFieldMd5Digest contains the checksum of the file, once decrypted and decompressed
 	MetadataFieldMd5Digest = "file_md5"
 
 	// Magic header that can be found at the beginning of Cloud Sync encrypted files
@@ -60,21 +68,8 @@ type objectReader struct {
 	f            io.Reader
 }
 
-/*
-
-A Cloud Sync encrypted file is a succession of objects (dictionaries).
-
-They have at least one field named "type". Two values for "type" are supported:
-* "metadata": then all other keys of the object are key metadata with their associated values
-* "data":  then we have another field named "data" which contains actual encrypted data
-
-Usually, the objects are ordered as following in a file:
-* most of the metadata at the beginning: this is necessary in order to initialize everything required to decrypt the data
-* all the data
-* a last metadata which is the checksum of the file
-
-*/
-
+// Reader is an interface allowing to extract low level blob of bytes
+// from a Cloud Sync encrypted file.
 type Reader interface {
 	// DataChannel starts reading the file and stores the metadata it encounter
 	// As soon as a data object is read, it returns a channel where the object and all consecutive data object
@@ -89,6 +84,7 @@ type Reader interface {
 	Metadata() map[string]interface{}
 }
 
+// NewReader returns a new Reader.
 func NewReader(f io.Reader) Reader {
 	return &objectReader{
 		f:        f,

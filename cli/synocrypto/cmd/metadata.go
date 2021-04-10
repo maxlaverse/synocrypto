@@ -11,6 +11,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+// NewMetadataCommand returns a command that displays file metadata
 func NewMetadataCommand(log *logging.Logger) *cli.Command {
 	var keyOpts KeyOptions
 	return &cli.Command{

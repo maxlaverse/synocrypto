@@ -14,15 +14,18 @@ import (
 	"github.com/maxlaverse/synocrypto/pkg/log"
 )
 
+// Decrypter is a generic interface for decryption
 type Decrypter interface {
 	Decrypt(f io.Reader, w io.Writer) error
 	Metadata(f io.Reader) (map[string]interface{}, error)
 }
 
+// NewDecrypter returns a new decrypter
 func NewDecrypter(opts DecrypterOptions) Decrypter {
 	return &decrypter{options: opts}
 }
 
+// DecrypterOptions holds the options that can be used for decryption
 type DecrypterOptions struct {
 	// Password used in the setup of Cloud Sync encryption task.
 	Password string
@@ -32,15 +35,14 @@ type DecrypterOptions struct {
 	PrivateKey []byte
 
 	// UseExternalLz4Decompressor enables decrompression using an external `lz4` command that must
-	// be installed separately. The option is present just in case, as the builtin decompressor is
-	// new.
+	// be installed separately.
 	UseExternalLz4Decompressor bool
 
 	// IgnoreChecksumMismatch prints
 	IgnoreChecksumMismatch bool
 }
 
-// Set a logger to collect additional information through the `log.Logger` interface.
+// SetLogger allows to collect additional information through the `log.Logger` interface.
 func SetLogger(l log.Logger) {
 	log.SetLogger(l)
 }
@@ -62,7 +64,7 @@ func (d *decrypter) Metadata(in io.Reader) (map[string]interface{}, error) {
 	}
 
 	// Discard the data
-	for _ = range dataChan {
+	for range dataChan {
 	}
 	return objReader.Metadata(), nil
 }
@@ -84,7 +86,6 @@ func (d *decrypter) Decrypt(in io.Reader, out io.Writer) error {
 	hashName, ok := objReader.Metadata()[encoding.MetadataFieldDigest]
 	if !ok {
 		log.Warningf("Unable to locate hash function field in the metadata. Integrity of the output won't be checked.", encoding.MetadataFieldDigest)
-		hashName = "not specified"
 	} else if hashName == "md5" {
 		log.Debugf("Output integrity verified through md5")
 		hasher = md5.New()

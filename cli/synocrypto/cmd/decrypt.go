@@ -13,11 +13,13 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+// DecryptOptions holds the options specific to the decryption command
 type DecryptOptions struct {
 	OutputDir     string
 	PrintToStdout bool
 }
 
+// NewDecryptCommand returns a command for decrypting a Cloud Sync file
 func NewDecryptCommand(log *logging.Logger) *cli.Command {
 	var keyOpts KeyOptions
 	var opts DecryptOptions

@@ -9,6 +9,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+// KeyOptions holds the options common for setting up the decryption
 type KeyOptions struct {
 	Password       string
 	PasswordFile   string

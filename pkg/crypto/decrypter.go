@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	AES256KeySize = 32
+	aes256KeySizeBytes = 32
 )
 
 type decrypter struct {
@@ -24,6 +24,7 @@ type decrypter struct {
 	out       io.Writer
 }
 
+// DecryptOnceWithPrivateKey decrypts a single blob of data using an RSA private key
 func DecryptOnceWithPrivateKey(privateKeyData, encodedData []byte) ([]byte, error) {
 	privateKeyBlock, _ := pem.Decode(privateKeyData)
 	if privateKeyBlock == nil {
@@ -44,6 +45,8 @@ func DecryptOnceWithPrivateKey(privateKeyData, encodedData []byte) ([]byte, erro
 	return decryptedData, nil
 }
 
+// DecryptOnceWithPasswordAndSalt decrypts a single blob of data with
+// an AES decrypter initialized by password and salt
 func DecryptOnceWithPasswordAndSalt(password, salt, encodedData []byte) ([]byte, error) {
 	var b bytes.Buffer
 	sessionKeyDecrypter := NewWithPasswordAndSalt(password, salt, &b)
@@ -59,6 +62,7 @@ func DecryptOnceWithPasswordAndSalt(password, salt, encodedData []byte) ([]byte,
 	return b.Bytes(), nil
 }
 
+// NewWithPasswordAndSalt returns an AES decrypter initialized by password and salt
 func NewWithPasswordAndSalt(password, salt []byte, out io.Writer) io.WriteCloser {
 	iteration := 1
 	if len(salt) > 0 {
@@ -67,7 +71,7 @@ func NewWithPasswordAndSalt(password, salt []byte, out io.Writer) io.WriteCloser
 
 	// AES-256 is used as indicated in this "Cloud Sync White Paper":
 	// https://web.archive.org/web/20160606190954/https://global.download.synology.com/download/Document/WhitePaper/Synology_Cloud_Sync_White_Paper-Based_on_DSM_6.0.pdf
-	key, iv := openSSLKDF(password, salt, iteration, AES256KeySize, aes.BlockSize, md5.New)
+	key, iv := openSSLKDF(password, salt, iteration, aes256KeySizeBytes, aes.BlockSize, md5.New)
 	return newAESCBCDecrypter(key, iv, out)
 }
 

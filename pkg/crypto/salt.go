@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 )
 
+// IsSaltedHashOf returns true if hash is a salted hash of data
 func IsSaltedHashOf(hash, data string) bool {
 	return saltedHashOf(hash[:10], data) == hash
 }
