@@ -1,5 +1,10 @@
 # Synology Cloud Sync decryption in Go
 
+[![GoDoc](https://godoc.org/github.com/maxlaverse/synocrypto?status.svg)](https://godoc.org/github.com/maxlaverse/synocrypto)
+[![test](https://github.com/maxlaverse/synocrypto/actions/workflows/workflow.yaml/badge.svg)](https://github.com/maxlaverse/synocrypto/actions/workflows/workflow.yaml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/maxlaverse/synocrypto)](https://goreportcard.com/report/github.com/maxlaverse/synocrypto)
+[![GitHub tag (latest SemVer)](https://img.shields.io/github/tag/maxlaverse/synocrypto.svg?style=social)](https://github.com/maxlaverse/synocrypto/tags)
+
 ## Overview
 
 A Go library and CLI to decrypt Synology Cloud Sync files.
