@@ -51,3 +51,9 @@ func TestDecrypterPrivateKey(t *testing.T) {
 		})
 	}
 }
+
+func TestPublicKeyFromPrivateKey(t *testing.T) {
+	publicKey, err := PublicKeyFromPrivateKey([]byte(testdata.FixturePrivateKey))
+	assert.NoError(t, err)
+	assert.Equal(t, testdata.FixturePublicKey, publicKey)
+}

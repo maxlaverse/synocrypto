@@ -9,6 +9,7 @@ import (
 	"crypto/rsa"
 	"crypto/sha1"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/pem"
 	"fmt"
 	"io"
@@ -16,12 +17,40 @@ import (
 
 const (
 	aes256KeySizeBytes = 32
+
+	rsaPublicKeyBegin = "-----BEGIN RSA PUBLIC KEY-----\n"
+	rsaPublicKeyEnd   = "-----END RSA PUBLIC KEY-----\n"
+	rsaLineMaxLength  = 64
 )
 
 type decrypter struct {
 	mode      cipher.BlockMode
 	lastBlock []byte
 	out       io.Writer
+}
+
+// PublicKeyFromPrivateKey generates the public key corresponding to a given
+// private key
+func PublicKeyFromPrivateKey(privateKey []byte) (string, error) {
+	privateKeyBlock, _ := pem.Decode(privateKey)
+	if privateKeyBlock == nil {
+		return "", fmt.Errorf("no private key found in pem")
+	}
+	key, err := x509.ParsePKCS1PrivateKey(privateKeyBlock.Bytes)
+	if err != nil {
+		return "", fmt.Errorf("unable to parse private key: %w", err)
+	}
+
+	publicKey := base64.StdEncoding.EncodeToString(x509.MarshalPKCS1PublicKey(&key.PublicKey))
+	var b bytes.Buffer
+	b.WriteString(rsaPublicKeyBegin)
+	for i := 0; i < len(publicKey)/rsaLineMaxLength; i++ {
+		b.WriteString(publicKey[i*rsaLineMaxLength:i*rsaLineMaxLength+rsaLineMaxLength] + "\n")
+	}
+	b.WriteString(publicKey[(len(publicKey)/rsaLineMaxLength)*rsaLineMaxLength:] + "\n")
+	b.WriteString(rsaPublicKeyEnd)
+
+	return b.String(), nil
 }
 
 // DecryptOnceWithPrivateKey decrypts a single blob of data using an RSA private key
