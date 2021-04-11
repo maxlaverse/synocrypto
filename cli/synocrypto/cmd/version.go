@@ -8,7 +8,7 @@ import (
 
 var (
 	// Version is the current version of the CLI
-	Version = "0.0.1"
+	Version = "0.0.2"
 
 	// GitRevision is set during build time with the current git revision
 	GitRevision = "unknown"
