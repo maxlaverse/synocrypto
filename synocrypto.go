@@ -195,6 +195,19 @@ func retrieveSessionKey(password string, privateKey []byte, metadata map[string]
 }
 
 func retrieveSessionKeyByPrivateKey(privateKey []byte, metadata map[string]interface{}) ([]byte, error) {
+	keyHash, hasKeyHash := metadata[encoding.MetadataFieldEncryptionKey2Hash]
+	if !hasKeyHash {
+		log.Warning("File is missing the hash of the encrypted key2. Won't be able to check if private key is valid")
+	} else {
+		publicKey, err := crypto.PublicKeyFromPrivateKey(privateKey)
+		if err != nil {
+			return nil, fmt.Errorf("error extracting public key from private key: '%w'", err)
+		}
+		if !crypto.IsSaltedHashOf(keyHash.(string), publicKey) {
+			return nil, fmt.Errorf("private key hash don't match (expected: '%s')", keyHash.(string))
+		}
+	}
+
 	encryptionKey2, hasEncryptionKey := metadata[encoding.MetadataFieldEncryptionKey2]
 
 	if !hasEncryptionKey {

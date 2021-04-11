@@ -231,13 +231,6 @@ a file. If that's the case, the following equality should be true:
 key1_hash[:10] + md5(key1_hash[:10] + password) == key1_hash
 ```
 
-#### Verify session key
-It's possible to verify if the session key was correctly decrypted. In this case, the following
-equality should be true:
-```
-session_key_hash[:10] + md5(session_key_hash[:10] + session_key) == session_key_hash
-```
-
 ### Retrieving the Session Key by Private Key
 
 The `enc_key2` field is the `session key` encrypted by private key. It's possible to decrypt
@@ -278,6 +271,32 @@ And the base64 decoded value of `enc_key2`: `kBbiJllccHDtABrzsCsWqqNDitS73zPywor
 
 - `6C1FD4FA9566048ACE57BE85FC600ED914799F2A1AD31212D6678D30AC015D22` is the hexadecimal
   representation of the `session key` once decrypted
+
+It's possible to verify if the public key given by the user corresponds to the one used to encrypt
+a file. If that's the case, the following equality should be true:
+```
+key2_hash[:10] + md5(key2_hash[:10] + public_key) == key2_hash
+```
+
+With public key in the following form:
+```
+-----BEGIN RSA PUBLIC KEY-----
+MIIBCgKCAQEAtBz8vOnQLVH3pdKtbPUnl0FgWAgHoWGbVhP0JdSeE8h8tfL5p0i0
+FB/O8PDrxeLMuJBB3MFAez+oHXTBxigFHWD6AShD9fcNaPaRTBmV/hiRu5qNOuIw
+/yv8V9UR+j3/FASCthdte3QEAMpJG6EstGfqmnx5vsFcOEQ9CFNqV6fnOp5zmDf1
+ebC7B9LeiM/YCoGFqatXyA6J5Z0rCCsurIKPXWa6WBsbGRDS66l3/U8KRuIcLOYJ
+QfKH5ze4tb/COduCmMjLKrLOCK/jQ7QuI7yZFlfG3eVOl71Oaevz8Lx9Ozse0PH9
+gIYYtyVMwR90bbX77rlQdfekicWJHxRkYQIDAQAB
+-----END RSA PUBLIC KEY-----
+```
+
+
+### Verify session key
+It's possible to verify if the session key was correctly decrypted. In this case, the following
+equality should be true:
+```
+session_key_hash[:10] + md5(session_key_hash[:10] + session_key) == session_key_hash
+```
 
 ### Decrypting data
 
