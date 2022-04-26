@@ -1,6 +1,7 @@
 package compression
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/maxlaverse/synocrypto/pkg/log"
@@ -23,6 +24,7 @@ func NewLz4Builtin(out io.Writer) (io.WriteCloser, error) {
 	go func() {
 		n, err := io.Copy(out, zr)
 		if err != nil {
+			err = fmt.Errorf("error copying decompressed data to output: %w", err)
 			log.Errorf("Decompression copy completed (%d bytes, err: %v)", n, err)
 		} else {
 			log.Debugf("Decompression copy completed (%d bytes)", n)
@@ -37,10 +39,15 @@ func NewLz4Builtin(out io.Writer) (io.WriteCloser, error) {
 }
 
 func (b *lz4Builtin) Write(p []byte) (int, error) {
-	return b.pw.Write(p)
+	n, err := b.pw.Write(p)
+	if err != nil {
+		return n, fmt.Errorf("error writing to internal pipe: %w", err)
+	}
+	return n, nil
 }
 
 func (b *lz4Builtin) Close() error {
+	// Wait for the gorouting to finish - we don't want to leak it
 	err := <-b.done
 	close(b.done)
 	return err
