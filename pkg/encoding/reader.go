@@ -174,7 +174,7 @@ func verifyCloudSyncHeader(f io.Reader) error {
 	buf := make([]byte, len(cloudSyncFileHeader))
 	_, err := f.Read(buf)
 	if err != nil {
-		return fmt.Errorf("error while reading Cloud Sync's file header: %w", err)
+		return fmt.Errorf("error reading Cloud Sync's file header: %w", err)
 	}
 
 	if string(buf) != cloudSyncFileHeader {
@@ -184,7 +184,7 @@ func verifyCloudSyncHeader(f io.Reader) error {
 	buf = make([]byte, 32)
 	_, err = f.Read(buf)
 	if err != nil {
-		return fmt.Errorf("error while reading Cloud Sync's hashed file header: %w", err)
+		return fmt.Errorf("error reading Cloud Sync's hashed file header: %w", err)
 	}
 	md5hash := fmt.Sprintf("%x", md5.Sum([]byte(cloudSyncFileHeader)))
 	if md5hash != string(buf) {
