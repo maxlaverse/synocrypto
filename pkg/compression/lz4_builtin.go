@@ -41,7 +41,6 @@ func (b *lz4Builtin) Write(p []byte) (int, error) {
 }
 
 func (b *lz4Builtin) Close() error {
-	b.pw.Close()
 	err := <-b.done
 	close(b.done)
 	return err
