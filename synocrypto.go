@@ -122,25 +122,27 @@ func (d *decrypter) Decrypt(in io.Reader, out io.Writer) error {
 	}
 
 	// Pipe a decrypter with this session key
-	out = crypto.NewWithPasswordAndSalt(sessionKey, []byte{}, out)
+	cryptoOut := crypto.NewWithPasswordAndSalt(sessionKey, []byte{}, out)
 
 	// Read the data
+	blockCount := 0
 	for data := range dataChan {
-		_, err = out.Write(data)
+		blockCount++
+		n, err := cryptoOut.Write(data)
 		if err != nil {
-			return fmt.Errorf("error writing to output stream: %w", err)
+			cryptoOut.Close()
+			return fmt.Errorf("error writing block #%d (%d bytes, written: %d) to output stream: %w", blockCount, len(data), n, err)
 		}
 	}
 	if objReader.Error() != nil {
-		return fmt.Errorf("error while reading the encodings: %w", objReader.Error())
+		cryptoOut.Close()
+		return fmt.Errorf("error reading the encodings: %w", objReader.Error())
 	}
 
 	// Close and finish
-	if v, ok := out.(io.WriteCloser); ok {
-		err = v.Close()
-		if err != nil {
-			return fmt.Errorf("error while closing stream: %w", err)
-		}
+	err = cryptoOut.Close()
+	if err != nil {
+		return fmt.Errorf("error closing stream: %w", err)
 	}
 
 	// Check the file's integrity if we can

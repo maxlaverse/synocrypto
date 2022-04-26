@@ -99,14 +99,14 @@ func decrypt(log *logging.Logger, keyOpts KeyOptions, cliOpts DecryptOptions, in
 		originalFilepath := filenameWithTag(inFilepath, "original")
 		err := os.Rename(inFilepath, originalFilepath)
 		if err != nil {
-			return fmt.Errorf("error while renaming '%s' to '%s': %w", inFilepath, originalFilepath, err)
+			return fmt.Errorf("error renaming '%s' to '%s': %w", inFilepath, originalFilepath, err)
 		}
 
 		// Close the file before moving it, even if it means closing it again in defer()
 		outStream.(*os.File).Close()
 		err = os.Rename(outFilepath, inFilepath)
 		if err != nil {
-			return fmt.Errorf("error while renaming '%s' to '%s': %w", outFilepath, inFilepath, err)
+			return fmt.Errorf("error renaming '%s' to '%s': %w", outFilepath, inFilepath, err)
 		}
 	}
 	return nil
