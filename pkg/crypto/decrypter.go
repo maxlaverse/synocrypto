@@ -24,9 +24,10 @@ const (
 )
 
 type decrypter struct {
-	mode      cipher.BlockMode
-	lastBlock []byte
-	out       io.Writer
+	hasBufferedData bool
+	mode            cipher.BlockMode
+	lastBlock       []byte
+	out             io.Writer
 }
 
 // PublicKeyFromPrivateKey generates the public key corresponding to a given
@@ -112,31 +113,54 @@ func newAESCBCDecrypter(key, iv []byte, out io.Writer) io.WriteCloser {
 	}
 }
 
-func (d *decrypter) Write(p []byte) (n int, err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("critical failure while decrypting")
-		}
-	}()
-
-	if len(d.lastBlock) > 0 {
+// Write always buffers the decrypted data and writes it on the next call to Write() or Close()
+func (d *decrypter) Write(p []byte) (int, error) {
+	var n int
+	if d.hasBufferedData {
+		var err error
 		n, err = d.out.Write(d.lastBlock)
+		if err != nil {
+			return n, fmt.Errorf("error flushing buffered block: %w", err)
+		}
+		d.hasBufferedData = false
 	}
-	d.lastBlock = make([]byte, len(p))
+
 	if len(p) == 0 {
-		return n, err
+		return n, nil
 	}
-	d.mode.CryptBlocks(d.lastBlock, p)
+
+	if len(d.lastBlock) != len(p) {
+		d.lastBlock = make([]byte, len(p))
+	}
+	err := func() (err error) {
+		defer func() {
+			if r := recover(); r != nil {
+				err = fmt.Errorf("panic: %v", r)
+			}
+		}()
+
+		d.mode.CryptBlocks(d.lastBlock, p)
+		d.hasBufferedData = true
+		return
+	}()
 	return n, err
 }
 
-func (d *decrypter) Close() error {
+func (d *decrypter) writeLastBlock() (int, error) {
+	if !d.hasBufferedData {
+		return -1, nil
+	}
 	var err error
 	d.lastBlock, err = pkcs7Unpad(d.lastBlock, d.mode.BlockSize())
 	if err != nil {
-		return fmt.Errorf("unable to unpad the last chunk of data: %w", err)
+		return -1, fmt.Errorf("unable to unpad data: %w", err)
 	}
-	_, err = d.Write(nil)
+
+	return d.Write(nil)
+}
+
+func (d *decrypter) Close() error {
+	_, err := d.writeLastBlock()
 
 	if v, ok := d.out.(io.WriteCloser); ok {
 		if err := v.Close(); err != nil {
