@@ -47,8 +47,6 @@ func (b *lz4Builtin) Write(p []byte) (int, error) {
 }
 
 func (b *lz4Builtin) Close() error {
-	b.pw.Close()
-
 	// Wait for the gorouting to finish - we don't want to leak it
 	err := <-b.done
 	close(b.done)
