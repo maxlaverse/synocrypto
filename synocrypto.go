@@ -81,6 +81,12 @@ func (d *decrypter) Decrypt(in io.Reader, out io.Writer) error {
 		return fmt.Errorf("error reading metadata: %w", err)
 	}
 
+	// Retrieve the session key required to decrypt the data
+	sessionKey, err := retrieveSessionKey(d.options.Password, d.options.PrivateKey, objReader.Metadata())
+	if err != nil {
+		return fmt.Errorf("unable to initialize the decryption: %w", err)
+	}
+
 	// Pipe a hasher if we have information allowing us to verify its integrity.
 	var hasher hash.Hash
 	hashName, ok := objReader.Metadata()[encoding.MetadataFieldDigest]
@@ -113,12 +119,6 @@ func (d *decrypter) Decrypt(in io.Reader, out io.Writer) error {
 		}
 	} else {
 		log.Debug("Compression is disabled")
-	}
-
-	// Retrieve the session key required to decrypt the data
-	sessionKey, err := retrieveSessionKey(d.options.Password, d.options.PrivateKey, objReader.Metadata())
-	if err != nil {
-		return fmt.Errorf("unable to initialize the decryption: %w", err)
 	}
 
 	// Pipe a decrypter with this session key
