@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestDecompressingFiles(t *testing.T) {
+func TestDecompressingFileWorks(t *testing.T) {
 	testCases := []struct {
 		filepath string
 	}{
@@ -42,4 +42,25 @@ func TestDecompressingFiles(t *testing.T) {
 			assert.Equal(t, expectedOutputData, b.Bytes())
 		})
 	}
+}
+
+func TestDecompressingBrokenFileWorksReturnsError(t *testing.T) {
+	inputData, err := ioutil.ReadFile("../../testdata/broken.txt.lz4")
+	if !assert.NoError(t, err) {
+		t.Fatal("unable to read file used for testing")
+	}
+
+	var b bytes.Buffer
+	z, err := NewLz4Builtin(&b)
+
+	assert.NoError(t, err)
+
+	_, err = z.Write(inputData)
+	assert.Error(t, err)
+	assert.EqualError(t, err, "decompression failed: io: read/write on closed pipe, lz4: invalid header checksum: got a7; expected ef")
+
+	err = z.Close()
+	assert.Error(t, err)
+	assert.EqualError(t, err, "decompression failed: lz4: invalid header checksum: got a7; expected ef")
+
 }

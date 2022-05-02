@@ -9,46 +9,60 @@ import (
 )
 
 type lz4Builtin struct {
-	zr   io.Reader
-	pw   *io.PipeWriter
-	done chan error
+	zr            io.Reader
+	pw            *io.PipeWriter
+	done          chan struct{}
+	pipeExitError error
 }
 
 // NewLz4Builtin returns a new lz4 decompressor based on
 // github.com/pierrec/lz4
 func NewLz4Builtin(out io.Writer) (io.WriteCloser, error) {
 	pr, pw := io.Pipe()
-	zr := lz4.NewReader(pr)
 
-	done := make(chan error)
-	go func() {
-		n, err := io.Copy(out, zr)
-		if err != nil {
-			err = fmt.Errorf("error copying decompressed data to output: %w", err)
-			log.Errorf("Decompression copy completed (%d bytes, err: %v)", n, err)
-		} else {
-			log.Debugf("Decompression copy completed (%d bytes)", n)
-		}
+	b := &lz4Builtin{
+		zr:   lz4.NewReader(pr),
+		pw:   pw,
+		done: make(chan struct{}),
+	}
+	go b.copyRoutine(out)
 
-		pw.Close()
-		done <- err
-		log.Debug("Decompression routine exited")
-	}()
+	return b, nil
+}
 
-	return &lz4Builtin{zr: zr, pw: pw, done: done}, nil
+func (b *lz4Builtin) copyRoutine(out io.Writer) {
+	defer close(b.done)
+
+	n, err := io.Copy(out, b.zr)
+	if err != nil {
+		b.pipeExitError = err
+		log.Errorf("Decompression copy completed (%d bytes, err: %v)", n, err)
+	} else {
+		log.Debugf("Decompression copy completed (%d bytes)", n)
+	}
+
+	b.pw.Close()
 }
 
 func (b *lz4Builtin) Write(p []byte) (int, error) {
+	if b.pipeExitError != nil {
+		return -1, fmt.Errorf("decompression failed: can't accept more data: %v", b.pipeExitError)
+	}
+
 	n, err := b.pw.Write(p)
-	if err != nil {
+	if err != nil && err == io.ErrClosedPipe {
+		<-b.done
+		return n, fmt.Errorf("decompression failed: %v, %w", err, b.pipeExitError)
+	} else if err != nil {
 		return n, fmt.Errorf("error writing to internal pipe: %w", err)
 	}
 	return n, nil
 }
 
 func (b *lz4Builtin) Close() error {
-	// Wait for the gorouting to finish - we don't want to leak it
-	err := <-b.done
-	close(b.done)
-	return err
+	<-b.done
+	if b.pipeExitError != nil {
+		return fmt.Errorf("decompression failed: %w", b.pipeExitError)
+	}
+	return nil
 }
