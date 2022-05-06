@@ -129,9 +129,12 @@ func (d *decrypter) Write(p []byte) (int, error) {
 		return n, nil
 	}
 
-	if len(d.lastBlock) != len(p) {
+	if len(d.lastBlock) < len(p) {
 		d.lastBlock = make([]byte, len(p))
+	} else if len(d.lastBlock) > len(p) {
+		d.lastBlock = d.lastBlock[:len(p)]
 	}
+
 	err := func() (err error) {
 		defer func() {
 			if r := recover(); r != nil {
