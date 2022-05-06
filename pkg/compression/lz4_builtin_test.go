@@ -57,7 +57,7 @@ func TestDecompressingBrokenFileWorksReturnsError(t *testing.T) {
 
 	_, err = z.Write(inputData)
 	assert.Error(t, err)
-	assert.EqualError(t, err, "decompression failed: io: read/write on closed pipe, lz4: invalid header checksum: got a7; expected ef")
+	assert.EqualError(t, err, "decompression failed: lz4: invalid header checksum: got a7; expected ef")
 
 	err = z.Close()
 	assert.Error(t, err)

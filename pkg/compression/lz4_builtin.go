@@ -51,8 +51,7 @@ func (b *lz4Builtin) Write(p []byte) (int, error) {
 
 	n, err := b.pw.Write(p)
 	if err != nil && err == io.ErrClosedPipe {
-		<-b.done
-		return n, fmt.Errorf("decompression failed: %v, %w", err, b.pipeExitError)
+		return n, b.Close()
 	} else if err != nil {
 		return n, fmt.Errorf("error writing to internal pipe: %w", err)
 	}
