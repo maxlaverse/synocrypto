@@ -1,6 +1,8 @@
 package crypto
 
-import "hash"
+import (
+	"hash"
+)
 
 func openSSLKDF(password, salt []byte, iter, keyLen, ivLen int, h func() hash.Hash) ([]byte, []byte) {
 	hasher := h()
