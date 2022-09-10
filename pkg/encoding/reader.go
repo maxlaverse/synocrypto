@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"fmt"
 	"io"
+	"reflect"
 
 	"github.com/maxlaverse/synocrypto/pkg/log"
 )
@@ -110,7 +111,10 @@ func (r *objectReader) DataChannel() (chan []byte, error) {
 			return nil, fmt.Errorf("could not find any real data")
 		}
 
-		objDict := obj.(map[string]interface{})
+		objDict, ok := obj.(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("unexpected object type '%v': %v", reflect.TypeOf(obj), obj)
+		}
 		switch objDict[objectFieldType] {
 		case objectValueTypeMetadata:
 			r.processMetadata(objDict)
