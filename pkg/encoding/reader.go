@@ -170,6 +170,9 @@ func (r *objectReader) readDataToChannel(dataChan chan []byte) {
 			r.processMetadata(objDict)
 		} else if objDict[objectFieldType] == objectValueTypeData {
 			dataChan <- objDict[objectFieldData].([]byte)
+		} else {
+			r.readingError = fmt.Errorf("unknown block type: %v", objectFieldType)
+			return
 		}
 	}
 }
