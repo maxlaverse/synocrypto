@@ -48,7 +48,6 @@ type encrypter struct {
 }
 
 func (d *encrypter) Write(p []byte) (int, error) {
-	var n int
 	if d.hasBufferedBlock {
 		lastBlockEncrypted := make([]byte, len(d.bufferedBlock))
 
@@ -72,13 +71,16 @@ func (d *encrypter) Write(p []byte) (int, error) {
 		}
 		d.hasBufferedBlock = false
 	}
+
+	// We have to return len(p) instead of what was really written
+	// to the output, or io.Copy() returns 'short write' error.
 	if len(p) == 0 {
-		return n, nil
+		return len(p), nil
 	}
 
 	d.bufferedBlock = p
 	d.hasBufferedBlock = true
-	return n, nil
+	return len(p), nil
 }
 
 func (d *encrypter) flushBufferWithPadding() (int, error) {

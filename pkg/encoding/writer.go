@@ -31,9 +31,8 @@ func (w *objectWriter) Write(data []byte) (int, error) {
 	dataObj := map[string]interface{}{}
 	dataObj[objectFieldType] = objectValueTypeData
 	dataObj[objectFieldData] = data
-	err := writeObject(dataObj, w.f)
 
-	return 0, err
+	return len(data), writeObject(dataObj, w.f)
 }
 
 func (w *objectWriter) WriteMetadata(metadata map[string]interface{}) error {
