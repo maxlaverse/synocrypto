@@ -7,10 +7,10 @@ import (
 
 // IsSaltedHashOf returns true if hash is a salted hash of data
 func IsSaltedHashOf(hash, data string) bool {
-	return saltedHashOf(hash[:10], data) == hash
+	return SaltedHashOf(hash[:10], data) == hash
 }
 
-func saltedHashOf(salt, data string) string {
+func SaltedHashOf(salt, data string) string {
 	h := md5.New()
 	h.Write([]byte(salt))
 	h.Write([]byte(data))
