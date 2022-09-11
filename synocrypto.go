@@ -45,8 +45,10 @@ type Encrypter interface {
 }
 
 type EncrypterOptions struct {
-	Password       string
-	UseCompression bool
+	Password                string
+	Filename                string
+	UseCompression          bool
+	DisableDigestGeneration bool
 }
 
 // NewEncrypter returns a new encrypter

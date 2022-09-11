@@ -30,6 +30,11 @@ func TestEncryptByPassword(t *testing.T) {
 	err = d.Decrypt(bytes.NewReader(outputEncrypted.Bytes()), &outputDecrypted)
 	assert.NoError(t, err)
 	assert.Equal(t, inputData, outputDecrypted.String())
+
+	metadata, err := d.Metadata(bytes.NewReader(outputEncrypted.Bytes()))
+	assert.NoError(t, err)
+	assert.Equal(t, "67409d947d2b8ecbed8451f85ad4eead", metadata["file_md5"])
+	assert.Equal(t, "md5", metadata["digest"])
 }
 
 func TestEncryptAndRetrieveSessionKeyByPassword(t *testing.T) {

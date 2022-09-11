@@ -1,10 +1,12 @@
 package synocrypto
 
 import (
+	"crypto/md5"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"hash"
 	"io"
 	"math/big"
 
@@ -49,6 +51,12 @@ func (e *encrypter) Encrypt(in io.Reader, out io.Writer) error {
 	metadata[encoding.MetadataFieldSessionKeyHash] = crypto.SaltedHashOf(salt, string(sessionKeyHex))
 	metadata[encoding.MetadataFieldEncryptionKey1] = passwordEncryptedSessionKey
 	metadata[encoding.MetadataFieldEncryptionKey1Hash] = passwordEncryptedSessionKeyHash
+	if e.options.Filename != "" {
+		metadata[encoding.MetadataFieldFilename] = e.options.Filename
+	}
+	if !e.options.DisableDigestGeneration {
+		metadata[encoding.MetadataFieldDigest] = "md5"
+	}
 
 	objWriter := encoding.NewWriter(out)
 	err = objWriter.WriteMetadata(metadata)
@@ -58,11 +66,26 @@ func (e *encrypter) Encrypt(in io.Reader, out io.Writer) error {
 
 	cryptoOut := crypto.NewEncrypterWithPasswordAndSalt(sessionKey, []byte{}, objWriter)
 
-	_, err = io.Copy(cryptoOut, in)
+	copyDst := cryptoOut.(io.Writer)
+	var hasher hash.Hash
+	if !e.options.DisableDigestGeneration {
+		hasher = md5.New()
+		copyDst = io.MultiWriter(hasher, copyDst)
+	}
+	_, err = io.Copy(copyDst, in)
 	if err != nil {
 		return fmt.Errorf("error copying data: %w", err)
 	}
 
+	if hasher != nil {
+		actualFileDigest := hex.EncodeToString(hasher.Sum(nil))
+		err = objWriter.WriteMetadata(map[string]interface{}{
+			encoding.MetadataFieldMd5Digest: actualFileDigest,
+		})
+		if err != nil {
+			return fmt.Errorf("error writing digest: %w", err)
+		}
+	}
 	return cryptoOut.Close()
 }
 
