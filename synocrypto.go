@@ -38,3 +38,18 @@ type DecrypterOptions struct {
 func NewDecrypter(opts DecrypterOptions) Decrypter {
 	return &decrypter{options: opts}
 }
+
+// Encrypter is a generic interface for encryption
+type Encrypter interface {
+	Encrypt(f io.Reader, w io.Writer) error
+}
+
+type EncrypterOptions struct {
+	Password       string
+	UseCompression bool
+}
+
+// NewEncrypter returns a new encrypter
+func NewEncrypter(opts EncrypterOptions) Encrypter {
+	return &encrypter{options: opts}
+}
