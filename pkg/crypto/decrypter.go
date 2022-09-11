@@ -23,10 +23,10 @@ const (
 )
 
 type decrypter struct {
-	hasBufferedData bool
-	mode            cipher.BlockMode
-	lastBlock       []byte
-	out             io.Writer
+	hasBufferedBlock bool
+	mode             cipher.BlockMode
+	bufferedBlock    []byte
+	out              io.Writer
 }
 
 // PublicKeyFromPrivateKey generates the public key corresponding to a given
@@ -108,23 +108,23 @@ func newAESCBCDecrypter(key, iv []byte, out io.Writer) io.WriteCloser {
 // Write always buffers the decrypted data and writes it on the next call to Write() or Close()
 func (d *decrypter) Write(p []byte) (int, error) {
 	var n int
-	if d.hasBufferedData {
+	if d.hasBufferedBlock {
 		var err error
-		n, err = d.out.Write(d.lastBlock)
+		n, err = d.out.Write(d.bufferedBlock)
 		if err != nil {
 			return n, fmt.Errorf("error flushing buffered block: %w", err)
 		}
-		d.hasBufferedData = false
+		d.hasBufferedBlock = false
 	}
 
 	if len(p) == 0 {
 		return n, nil
 	}
 
-	if len(d.lastBlock) < len(p) {
-		d.lastBlock = make([]byte, len(p))
-	} else if len(d.lastBlock) > len(p) {
-		d.lastBlock = d.lastBlock[:len(p)]
+	if len(d.bufferedBlock) < len(p) {
+		d.bufferedBlock = make([]byte, len(p))
+	} else if len(d.bufferedBlock) > len(p) {
+		d.bufferedBlock = d.bufferedBlock[:len(p)]
 	}
 
 	err := func() (err error) {
@@ -134,19 +134,20 @@ func (d *decrypter) Write(p []byte) (int, error) {
 			}
 		}()
 
-		d.mode.CryptBlocks(d.lastBlock, p)
-		d.hasBufferedData = true
+		d.mode.CryptBlocks(d.bufferedBlock, p)
+		d.hasBufferedBlock = true
 		return
 	}()
 	return n, err
 }
 
-func (d *decrypter) writeLastBlock() (int, error) {
-	if !d.hasBufferedData {
+func (d *decrypter) flushBufferWithoutPadding() (int, error) {
+	if !d.hasBufferedBlock {
 		return -1, nil
 	}
+
 	var err error
-	d.lastBlock, err = pkcs7Unpad(d.lastBlock, d.mode.BlockSize())
+	d.bufferedBlock, err = pkcs7Unpad(d.bufferedBlock, d.mode.BlockSize())
 	if err != nil {
 		return -1, fmt.Errorf("unable to unpad data: %w", err)
 	}
@@ -155,7 +156,7 @@ func (d *decrypter) writeLastBlock() (int, error) {
 }
 
 func (d *decrypter) Close() error {
-	_, err := d.writeLastBlock()
+	_, err := d.flushBufferWithoutPadding()
 
 	if v, ok := d.out.(io.WriteCloser); ok {
 		if err := v.Close(); err != nil {

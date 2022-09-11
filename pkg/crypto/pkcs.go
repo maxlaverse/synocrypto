@@ -1,6 +1,7 @@
 package crypto
 
 import (
+	"bytes"
 	"fmt"
 )
 
@@ -27,4 +28,18 @@ func pkcs7Unpad(data []byte, blocklen int) ([]byte, error) {
 	}
 
 	return data[:len(data)-padlen], nil
+}
+
+// Returns slice of data with padding.
+func pkcs7Pad(data []byte, blocklen int) ([]byte, error) {
+	if blocklen <= 0 {
+		return nil, fmt.Errorf("invalid blocklen %d", blocklen)
+	}
+	padlen := 1
+	for ((len(data) + padlen) % blocklen) != 0 {
+		padlen = padlen + 1
+	}
+
+	pad := bytes.Repeat([]byte{byte(padlen)}, padlen)
+	return append(data, pad...), nil
 }
