@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
-	"crypto/md5"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha1"
@@ -94,14 +93,7 @@ func DecryptOnceWithPasswordAndSalt(password, salt, encodedData []byte) ([]byte,
 
 // NewDecrypterWithPasswordAndSalt returns an AES decrypter initialized by password and salt
 func NewDecrypterWithPasswordAndSalt(password, salt []byte, out io.Writer) io.WriteCloser {
-	iteration := 1
-	if len(salt) > 0 {
-		iteration = 1000
-	}
-
-	// AES-256 is used as indicated in this "Cloud Sync White Paper":
-	// https://web.archive.org/web/20160606190954/https://global.download.synology.com/download/Document/WhitePaper/Synology_Cloud_Sync_White_Paper-Based_on_DSM_6.0.pdf
-	key, iv := openSSLKDF(password, salt, iteration, aes256KeySizeBytes, aes.BlockSize, md5.New)
+	key, iv := keyIV(password, salt)
 	return newAESCBCDecrypter(key, iv, out)
 }
 
@@ -171,28 +163,4 @@ func (d *decrypter) Close() error {
 		}
 	}
 	return err
-}
-
-// Returns slice of the original data without padding.
-// https://golang-examples.tumblr.com/post/98350728789/pkcs-7-padding
-func pkcs7Unpad(data []byte, blocklen int) ([]byte, error) {
-	if blocklen <= 0 {
-		return nil, fmt.Errorf("invalid blocklen %d", blocklen)
-	}
-	if len(data)%blocklen != 0 || len(data) == 0 {
-		return nil, fmt.Errorf("invalid data len %d", len(data))
-	}
-	padlen := int(data[len(data)-1])
-	if padlen > blocklen || padlen == 0 {
-		return nil, fmt.Errorf("invalid padding (padlen: %d, blocklen: %d)", padlen, blocklen)
-	}
-	// check padding
-	pad := data[len(data)-padlen:]
-	for i := 0; i < padlen; i++ {
-		if pad[i] != byte(padlen) {
-			return nil, fmt.Errorf("invalid padding (padlen: %d, pad: %d)", padlen, pad)
-		}
-	}
-
-	return data[:len(data)-padlen], nil
 }
