@@ -79,12 +79,12 @@ func DecryptOnceWithPrivateKey(privateKeyData, encodedData []byte) ([]byte, erro
 // an AES decrypter initialized by password and salt
 func DecryptOnceWithPasswordAndSalt(password, salt, encodedData []byte) ([]byte, error) {
 	var b bytes.Buffer
-	sessionKeyDecrypter := NewWithPasswordAndSalt(password, salt, &b)
-	_, err := sessionKeyDecrypter.Write(encodedData)
+	dataDecrypter := NewDecrypterWithPasswordAndSalt(password, salt, &b)
+	_, err := dataDecrypter.Write(encodedData)
 	if err != nil {
 		return nil, fmt.Errorf("error decrypting encrypted key1: '%w'", err)
 	}
-	err = sessionKeyDecrypter.Close()
+	err = dataDecrypter.Close()
 	if err != nil {
 		return nil, fmt.Errorf("error decrypting encrypted key1: '%w'", err)
 	}
@@ -92,8 +92,8 @@ func DecryptOnceWithPasswordAndSalt(password, salt, encodedData []byte) ([]byte,
 	return b.Bytes(), nil
 }
 
-// NewWithPasswordAndSalt returns an AES decrypter initialized by password and salt
-func NewWithPasswordAndSalt(password, salt []byte, out io.Writer) io.WriteCloser {
+// NewDecrypterWithPasswordAndSalt returns an AES decrypter initialized by password and salt
+func NewDecrypterWithPasswordAndSalt(password, salt []byte, out io.Writer) io.WriteCloser {
 	iteration := 1
 	if len(salt) > 0 {
 		iteration = 1000
@@ -184,13 +184,13 @@ func pkcs7Unpad(data []byte, blocklen int) ([]byte, error) {
 	}
 	padlen := int(data[len(data)-1])
 	if padlen > blocklen || padlen == 0 {
-		return nil, fmt.Errorf("invalid padding")
+		return nil, fmt.Errorf("invalid padding (padlen: %d, blocklen: %d)", padlen, blocklen)
 	}
 	// check padding
 	pad := data[len(data)-padlen:]
 	for i := 0; i < padlen; i++ {
 		if pad[i] != byte(padlen) {
-			return nil, fmt.Errorf("invalid padding")
+			return nil, fmt.Errorf("invalid padding (padlen: %d, pad: %d)", padlen, pad)
 		}
 	}
 
