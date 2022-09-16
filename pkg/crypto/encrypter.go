@@ -16,11 +16,11 @@ import (
 const (
 	// maxBlockSize is the maximum size an object can have. If the limit
 	// is cross, CloudSync complains about it and says it considers the file
-	// to be corrupted.
+	// to be corrupted. This size seems to be 8192 but we're being conservative.
 	maxBlockSize = 4096
 )
 
-// DecryptOnceWithPasswordAndSalt decrypts a single blob of data with
+// EncryptOnceWithPasswordAndSalt encrypts a single blob of data with
 // an AES decrypter initialized by password and salt
 func EncryptOnceWithPasswordAndSalt(password, salt, decodedData []byte) ([]byte, error) {
 	var b bytes.Buffer
@@ -28,12 +28,12 @@ func EncryptOnceWithPasswordAndSalt(password, salt, decodedData []byte) ([]byte,
 
 	_, err := sessionKeyEncrypter.Write(decodedData)
 	if err != nil {
-		return nil, fmt.Errorf("error decrypting encrypted key1: '%w'", err)
+		return nil, fmt.Errorf("error encrypting sessionKey: '%w'", err)
 	}
 
 	err = sessionKeyEncrypter.Close()
 	if err != nil {
-		return nil, fmt.Errorf("error decrypting encrypted key1: '%w'", err)
+		return nil, fmt.Errorf("error encrypting sessionKey: '%w'", err)
 	}
 
 	return b.Bytes(), nil
@@ -153,11 +153,13 @@ func (d *encrypter) write(p []byte) (int, error) {
 		return len(p), nil
 	}
 
-	d.bufferedBlock = make([]byte, len(p))
-	n := copy(d.bufferedBlock, p)
-	if n != len(p) {
-		panic(fmt.Sprintf("%d/%d/%d", n, len(p), len(d.bufferedBlock)))
+	if len(d.bufferedBlock) < len(p) {
+		d.bufferedBlock = make([]byte, len(p))
+	} else if len(d.bufferedBlock) > len(p) {
+		d.bufferedBlock = d.bufferedBlock[:len(p)]
 	}
+	copy(d.bufferedBlock, p)
+
 	d.hasBufferedBlock = true
 	return len(p), nil
 }
