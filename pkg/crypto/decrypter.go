@@ -78,7 +78,7 @@ func DecryptOnceWithPrivateKey(privateKeyData, encodedData []byte) ([]byte, erro
 // an AES decrypter initialized by password and salt
 func DecryptOnceWithPasswordAndSalt(password, salt, encodedData []byte) ([]byte, error) {
 	var b bytes.Buffer
-	sessionKeyDecrypter := NewWithPasswordAndSalt(password, salt, &b)
+	sessionKeyDecrypter := NewDecrypterWithPasswordAndSalt(password, salt, &b)
 	_, err := sessionKeyDecrypter.Write(encodedData)
 	if err != nil {
 		return nil, fmt.Errorf("error decrypting encrypted key1: '%w'", err)
@@ -91,8 +91,8 @@ func DecryptOnceWithPasswordAndSalt(password, salt, encodedData []byte) ([]byte,
 	return b.Bytes(), nil
 }
 
-// NewWithPasswordAndSalt returns an AES decrypter initialized by password and salt
-func NewWithPasswordAndSalt(password, salt []byte, out io.Writer) io.WriteCloser {
+// NewDecrypterWithPasswordAndSalt returns an AES decrypter initialized by password and salt
+func NewDecrypterWithPasswordAndSalt(password, salt []byte, out io.Writer) io.WriteCloser {
 	key, iv := keyIV(password, salt)
 	return newAESCBCDecrypter(key, iv, out)
 }

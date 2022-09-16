@@ -122,7 +122,7 @@ func (d *decrypter) Decrypt(in io.Reader, out io.Writer) error {
 	}
 
 	// Pipe a decrypter with this session key
-	cryptoOut := crypto.NewWithPasswordAndSalt(sessionKey, []byte{}, out)
+	cryptoOut := crypto.NewDecrypterWithPasswordAndSalt(sessionKey, []byte{}, out)
 
 	// Read the data
 	blockCount := 0
