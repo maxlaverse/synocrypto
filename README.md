@@ -33,6 +33,7 @@ USAGE:
 
 COMMANDS:
    decrypt, d   Decrypts a file
+   encrypt, e   Encrypts a file
    metadata, m  Displays the metadata of a file
    version      Prints the version
    help, h      Shows a list of commands or help for one command
@@ -68,5 +69,19 @@ if err != nil {
       panic(err)
 }
 ```
+
+### Encryption Support
+
+The library has a prototype implementation for encrypting files.
+Files encrypted with it can often (always?) be decrypted using the library again.
+However, Cloudsync sometimes fails to decrypt them with errors related to compression:
+```
+Sep 16 22:54:25 [ERROR] lz4-processor.cpp(239): LZ4F_decompress LOGIC ERROR: inbuf_consumed='0' inbuf_size='8'
+Sep 16 22:54:25 [ERROR] pipeline.cpp(119): Failed when read
+Sep 16 22:54:25 [ERROR] encrypt-file.cpp(148): Failed when reading from decryptor.
+Sep 16 22:54:25 [WARNING] worker.cpp(3211): Worker (15): Failed to decrypt file
+```
+
+I haven't had the time to debug this further.
 
 [releases]: https://github.com/maxlaverse/synocrypto/releases
