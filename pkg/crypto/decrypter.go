@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
-	"crypto/md5"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha1"
@@ -94,14 +93,7 @@ func DecryptOnceWithPasswordAndSalt(password, salt, encodedData []byte) ([]byte,
 
 // NewWithPasswordAndSalt returns an AES decrypter initialized by password and salt
 func NewWithPasswordAndSalt(password, salt []byte, out io.Writer) io.WriteCloser {
-	iteration := 1
-	if len(salt) > 0 {
-		iteration = 1000
-	}
-
-	// AES-256 is used as indicated in this "Cloud Sync White Paper":
-	// https://web.archive.org/web/20160606190954/https://global.download.synology.com/download/Document/WhitePaper/Synology_Cloud_Sync_White_Paper-Based_on_DSM_6.0.pdf
-	key, iv := openSSLKDF(password, salt, iteration, aes256KeySizeBytes, aes.BlockSize, md5.New)
+	key, iv := keyIV(password, salt)
 	return newAESCBCDecrypter(key, iv, out)
 }
 
