@@ -1,6 +1,6 @@
 # Synology Cloud Sync - Encryption Description
 
-Last revised: 2021-04-04.
+Last revised: 2022-09-17.
 
 Synology Inc distributes a software named Cloud Sync. It allows customers to synchronize the
 files of their Network Attached Storage with the storage provider of their choice (e.g. AWS S3,
@@ -131,10 +131,12 @@ file. As of today, the following metadata fields have been encountered:
 | `key1_hash`        | `string`  | hash of the encryption key 1, for verification                                                |
 | `enc_key2`         | `string`  | encryption key 2                                                                              |
 | `key2_hash`        | `string`  | hash of the encryption key 2, for verification                                                |
-| `salt`             | `string`  | salt used to compute some digests (e.g. encryption key 1, session key)                        |
+| `salt`             | `string`  | 8-bytes salt used to encrypt the password as `enc_key1`                                       |
 | `version`          | `dict`    | is the version of Cloud Sync used to encrypt the file. It has two keys: `major` and `minor`   |
 | `session_key_hash` | `string`  | hash of the session key used to actually encrypt the data, for verification                   |
 | `file_md5`         | `string`  | contains the checksum of the file, once decrypted and decompressed, for verification          |
+
+Note: `key1_hash`, `key2_hash` and `session_key_hash` are each salted with 3 different randomly-generated alphabetical 10-bytes long strings
 
 ### Data Dictionary
 
