@@ -55,6 +55,9 @@ func readBytes(f io.Reader) ([]byte, error) {
 	}
 
 	length := binary.BigEndian.Uint16(buf)
+	if length == 0 {
+		return []byte{}, nil
+	}
 
 	buf = make([]byte, length)
 	_, err = f.Read(buf)

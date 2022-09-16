@@ -15,9 +15,8 @@ type lz4Builtin struct {
 	pipeExitError error
 }
 
-// NewLz4Builtin returns a new lz4 decompressor based on
-// github.com/pierrec/lz4
-func NewLz4Builtin(out io.Writer) (io.WriteCloser, error) {
+// NewLz4DecompBuiltin returns a new lz4 decompressor based on
+func NewLz4DecompBuiltin(out io.Writer) (io.WriteCloser, error) {
 	pr, pw := io.Pipe()
 
 	b := &lz4Builtin{

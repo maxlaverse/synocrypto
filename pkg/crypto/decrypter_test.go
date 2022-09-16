@@ -20,10 +20,10 @@ func TestDecryptOnceWithPasswordAndSalt(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run("", func(t *testing.T) {
-			encryptionKey1, err := base64.StdEncoding.DecodeString(tc.givenEncryptedKey1)
+			encryptedSessionKeyByPassword, err := base64.StdEncoding.DecodeString(tc.givenEncryptedKey1)
 			assert.NoError(t, err)
 
-			b, err := DecryptOnceWithPasswordAndSalt([]byte(tc.givenPassword), []byte(tc.givenSalt), encryptionKey1)
+			b, err := DecryptOnceWithPasswordAndSalt([]byte(tc.givenPassword), []byte(tc.givenSalt), encryptedSessionKeyByPassword)
 			assert.NoError(t, err)
 
 			assert.Equal(t, tc.expectedSessionKey, string(b))

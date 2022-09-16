@@ -29,7 +29,7 @@ func TestDecompressingFileWorks(t *testing.T) {
 			}
 
 			var b bytes.Buffer
-			z, err := NewLz4Builtin(&b)
+			z, err := NewLz4DecompBuiltin(&b)
 
 			assert.NoError(t, err)
 
@@ -51,7 +51,7 @@ func TestDecompressingBrokenFileWorksReturnsError(t *testing.T) {
 	}
 
 	var b bytes.Buffer
-	z, err := NewLz4Builtin(&b)
+	z, err := NewLz4DecompBuiltin(&b)
 
 	assert.NoError(t, err)
 

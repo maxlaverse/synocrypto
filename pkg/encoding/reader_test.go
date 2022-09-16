@@ -39,6 +39,22 @@ func TestMetadataExtraction(t *testing.T) {
 	assert.Equal(t, expectedMetadata, reader.Metadata())
 }
 
+func TestVerifyingValidCloudSyncHeader(t *testing.T) {
+	var b bytes.Buffer
+	b.WriteString("__CLOUDSYNC_ENC__d8d6ba7b9df02ef39a33ef912a91dc56")
+	err := verifyCloudSyncHeader(&b)
+
+	assert.NoError(t, err)
+}
+
+func TestVerifyingInvalidCloudSyncHeader(t *testing.T) {
+	var b bytes.Buffer
+	b.WriteString("__CLOUDSYNC_ENC__d8d6ba7b9df3ef912a91dc56")
+	err := verifyCloudSyncHeader(&b)
+
+	assert.Error(t, err)
+}
+
 func emptyChannel(d chan []byte) {
 	for {
 		select {
