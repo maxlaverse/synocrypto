@@ -109,10 +109,10 @@ func (d *decrypter) Decrypt(in io.Reader, out io.Writer) error {
 	if compressionEnabled == 1 {
 		if d.options.UseExternalLz4Decompressor {
 			log.Debug("Using external lz4 command for decompression")
-			out, err = compression.NewLz4External(out)
+			out, err = compression.NewLz4DecompExternal(out)
 		} else {
 			log.Debug("Using builtin lz4 decompressor")
-			out, err = compression.NewLz4Builtin(out)
+			out, err = compression.NewLz4DecompBuiltin(out)
 		}
 		if err != nil {
 			return fmt.Errorf("unable to initialize the decompression: %w", err)
