@@ -96,6 +96,29 @@ func computeDecrypterOptions(keyOpts KeyOptions) (synocrypto.DecrypterOptions, e
 	return opts, nil
 }
 
+func computeEncrypterOptions(keyOpts KeyOptions) (synocrypto.EncrypterOptions, error) {
+	opts := synocrypto.EncrypterOptions{
+		Password: keyOpts.Password,
+	}
+	if len(keyOpts.PrivateKeyFile) > 0 {
+		var err error
+		opts.PrivateKey, err = ioutil.ReadFile(keyOpts.PrivateKeyFile)
+		if err != nil {
+			return opts, fmt.Errorf("unable to read private key: %w", err)
+		}
+	}
+
+	if len(keyOpts.PasswordFile) > 0 {
+		data, err := ioutil.ReadFile(keyOpts.PasswordFile)
+		if err != nil {
+			return opts, fmt.Errorf("unable to read password file: %w", err)
+		}
+		opts.Password = string(data)
+	}
+
+	return opts, nil
+}
+
 func fileExists(filepath string) bool {
 	_, err := os.Stat(filepath)
 	return err == nil && !os.IsNotExist(err)

@@ -30,6 +30,7 @@ func main() {
 		Before: configureLogging(&debugMode),
 		Commands: []*cli.Command{
 			cmd.NewDecryptCommand(logger),
+			cmd.NewEncryptCommand(logger),
 			cmd.NewMetadataCommand(logger),
 			cmd.NewVersionCommand(),
 		},
