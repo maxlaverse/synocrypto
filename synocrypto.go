@@ -65,6 +65,9 @@ type EncrypterOptions struct {
 
 	// DisableDigestGeneration allows to disable the md5 checksum computation.
 	DisableDigestGeneration bool
+
+	// DisableIntegrityCheck disables the check that what was encrypted can be decrypted.
+	DisableIntegrityCheck bool
 }
 
 // NewEncrypter returns a new encrypter

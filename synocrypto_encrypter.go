@@ -10,6 +10,7 @@ import (
 	"io"
 	"math/big"
 	"path"
+	"sync"
 
 	"github.com/maxlaverse/synocrypto/pkg/compression"
 	"github.com/maxlaverse/synocrypto/pkg/crypto"
@@ -22,6 +23,43 @@ type encrypter struct {
 }
 
 func (e *encrypter) Encrypt(in io.Reader, out io.Writer) error {
+	if e.options.DisableIntegrityCheck {
+		return e.encrypt(in, out)
+	}
+
+	// Run an integrity check by verifying that at least we
+	// can decrypt what we encrypted, in case CloudSync can't.
+	dec := NewDecrypter(DecrypterOptions{
+		PrivateKey:             e.options.PrivateKey,
+		Password:               e.options.Password,
+		IgnoreChecksumMismatch: false,
+	})
+
+	var wg sync.WaitGroup
+	var decryptionErr error
+	pr, pw := io.Pipe()
+
+	wg.Add(1)
+	go func() {
+		decryptionErr = dec.Decrypt(pr, io.Discard)
+		wg.Done()
+	}()
+
+	err := e.encrypt(in, io.MultiWriter(out, pw))
+	pw.Close()
+	if err != nil {
+		return err
+	}
+
+	wg.Wait()
+	if decryptionErr != nil {
+		return fmt.Errorf("integrity check failed: %w", decryptionErr)
+	}
+
+	return err
+}
+
+func (e *encrypter) encrypt(in io.Reader, out io.Writer) error {
 	encryptionSalt, err := crypto.RandomSalt(8)
 	if err != nil {
 		return fmt.Errorf("unable to generate random salt: %w", err)
