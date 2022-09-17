@@ -7,7 +7,7 @@
 
 ## Overview
 
-A Go library and dependency-free CLI to decrypt Synology Cloud Sync files on various Operating Systems (Linux, macOS, Windows).
+A Go library to decrypt/encrypt Synology Cloud Sync files on various Operating Systems (Linux, macOS, Windows).
 
 The file format was originally discovered by [@marnix](https://github.com/marnix)
 and is summarized [in this document](ENCRYPTION.md).

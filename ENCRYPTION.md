@@ -136,7 +136,7 @@ file. As of today, the following metadata fields have been encountered:
 | `session_key_hash` | `string`  | hash of the session key used to actually encrypt the data, for verification                   |
 | `file_md5`         | `string`  | contains the checksum of the file, once decrypted and decompressed, for verification          |
 
-Note: `key1_hash`, `key2_hash` and `session_key_hash` are each salted with 3 different randomly-generated alphabetical 10-bytes long strings
+Note: `key1_hash`, `key2_hash` and `session_key_hash` are each salted with 3 different randomly-generated 10-bytes long alphabetical strings
 
 ### Data Dictionary
 
