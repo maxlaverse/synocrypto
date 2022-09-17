@@ -104,6 +104,10 @@ func (e *encrypter) encrypt(in io.Reader, out io.Writer) error {
 		metadata[encoding.MetadataFieldEncryptionKey2Hash] = privateKeyEncryptedSessionKeyHash
 	}
 
+	if len(e.options.Password) == 0 || len(e.options.PrivateKey) == 0 {
+		log.Warning("Both password and private key are required in order for CloudSync to decrypt the data")
+	}
+
 	if e.options.Filename != "" {
 		metadata[encoding.MetadataFieldFilename] = path.Base(e.options.Filename)
 	}
@@ -129,6 +133,7 @@ func (e *encrypter) encrypt(in io.Reader, out io.Writer) error {
 			in, err = compression.NewLz4CompExternal(in)
 		} else {
 			log.Debug("Using builtin lz4 compressor")
+			log.Warning("The built-in lz4 compressor produces files which can be read only by this library, not CloudSync")
 			in, err = compression.NewLz4CompBuiltin(in)
 		}
 		if err != nil {
