@@ -42,7 +42,7 @@ func TestEncrypt(t *testing.T) {
 			decrypter := NewDecrypterWithPasswordAndSalt([]byte(tc.givenSessionKey), []byte{}, &outputDecrypted)
 			n, err = decrypter.Write(outputEncrypted.Bytes())
 			assert.NoError(t, err)
-			assert.Equal(t, 0, n)
+			assert.Equal(t, outputEncrypted.Len(), n)
 
 			err = decrypter.Close()
 			assert.NoError(t, err)

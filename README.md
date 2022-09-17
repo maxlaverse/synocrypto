@@ -1,4 +1,4 @@
-# Synology Cloud Sync decryption in Go
+# Synology Cloud Sync encryption/decryption in Go
 
 [![GoDoc](https://godoc.org/github.com/maxlaverse/synocrypto?status.svg)](https://godoc.org/github.com/maxlaverse/synocrypto)
 [![test](https://github.com/maxlaverse/synocrypto/actions/workflows/workflow.yaml/badge.svg)](https://github.com/maxlaverse/synocrypto/actions/workflows/workflow.yaml)
@@ -45,7 +45,7 @@ GLOBAL OPTIONS:
 
 ## Library
 
-### Usage
+### Decryption Usage
 
 ```go
 encFile, err := os.Open("./my-encrypted-file.jpg")
@@ -70,18 +70,36 @@ if err != nil {
 }
 ```
 
-### Encryption Support
+### Encryption Usage
 
-The library has a prototype implementation for encrypting files.
-Files encrypted with it can often (always?) be decrypted using the library again.
-However, Cloudsync sometimes fails to decrypt them with errors related to compression:
-```
-Sep 16 22:54:25 [ERROR] lz4-processor.cpp(239): LZ4F_decompress LOGIC ERROR: inbuf_consumed='0' inbuf_size='8'
-Sep 16 22:54:25 [ERROR] pipeline.cpp(119): Failed when read
-Sep 16 22:54:25 [ERROR] encrypt-file.cpp(148): Failed when reading from decryptor.
-Sep 16 22:54:25 [WARNING] worker.cpp(3211): Worker (15): Failed to decrypt file
+```go
+plainFile, err := os.Open("./my-plain-file.jpg")
+if err != nil {
+      panic(err)
+}
+defer plainFile.Close()
+
+encFile, err := os.OpenFile("./my-encrypted-file.jpg", os.O_CREATE|os.O_WRONLY, 0644)
+if err != nil {
+      panic(err)
+}
+defer encFile.Close()
+
+privateKey, err := ioutil.ReadFile("private.pem")
+if err != nil {
+      panic(err)
+}
+
+encrypter := synocrypto.NewEncrypter(synocrypto.EncrypterOptions{
+      Password: "synocrypto",
+      PrivateKey: privateKey,
+})
+
+err = encrypter.Encrypt(plainFile, encFile)
+if err != nil {
+      panic(err)
+}
 ```
 
-I haven't had the time to debug this further.
 
 [releases]: https://github.com/maxlaverse/synocrypto/releases

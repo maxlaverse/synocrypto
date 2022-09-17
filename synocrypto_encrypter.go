@@ -10,6 +10,7 @@ import (
 	"io"
 	"math/big"
 	"path"
+	"sync"
 
 	"github.com/maxlaverse/synocrypto/pkg/compression"
 	"github.com/maxlaverse/synocrypto/pkg/crypto"
@@ -22,6 +23,43 @@ type encrypter struct {
 }
 
 func (e *encrypter) Encrypt(in io.Reader, out io.Writer) error {
+	if e.options.DisableIntegrityCheck {
+		return e.encrypt(in, out)
+	}
+
+	// Run an integrity check by verifying that at least we
+	// can decrypt what we encrypted, in case CloudSync can't.
+	dec := NewDecrypter(DecrypterOptions{
+		PrivateKey:             e.options.PrivateKey,
+		Password:               e.options.Password,
+		IgnoreChecksumMismatch: false,
+	})
+
+	var wg sync.WaitGroup
+	var decryptionErr error
+	pr, pw := io.Pipe()
+
+	wg.Add(1)
+	go func() {
+		decryptionErr = dec.Decrypt(pr, io.Discard)
+		wg.Done()
+	}()
+
+	err := e.encrypt(in, io.MultiWriter(out, pw))
+	pw.Close()
+	if err != nil {
+		return err
+	}
+
+	wg.Wait()
+	if decryptionErr != nil {
+		return fmt.Errorf("integrity check failed: %w", decryptionErr)
+	}
+
+	return err
+}
+
+func (e *encrypter) encrypt(in io.Reader, out io.Writer) error {
 	encryptionSalt, err := crypto.RandomSalt(8)
 	if err != nil {
 		return fmt.Errorf("unable to generate random salt: %w", err)
@@ -66,6 +104,10 @@ func (e *encrypter) Encrypt(in io.Reader, out io.Writer) error {
 		metadata[encoding.MetadataFieldEncryptionKey2Hash] = privateKeyEncryptedSessionKeyHash
 	}
 
+	if len(e.options.Password) == 0 || len(e.options.PrivateKey) == 0 {
+		log.Warning("Both password and private key are required in order for CloudSync to decrypt the data")
+	}
+
 	if e.options.Filename != "" {
 		metadata[encoding.MetadataFieldFilename] = path.Base(e.options.Filename)
 	}
@@ -91,6 +133,7 @@ func (e *encrypter) Encrypt(in io.Reader, out io.Writer) error {
 			in, err = compression.NewLz4CompExternal(in)
 		} else {
 			log.Debug("Using builtin lz4 compressor")
+			log.Warning("The built-in lz4 compressor produces files which can be read only by this library, not CloudSync")
 			in, err = compression.NewLz4CompBuiltin(in)
 		}
 		if err != nil {
