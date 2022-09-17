@@ -1,6 +1,6 @@
 module github.com/maxlaverse/synocrypto/cli/synocrypto
 
-go 1.16
+go 1.18
 
 require (
 	github.com/maxlaverse/synocrypto v0.0.0-20210411154523-101d272bbf64
