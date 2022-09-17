@@ -12,6 +12,8 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io"
+
+	"github.com/maxlaverse/synocrypto/pkg/log"
 )
 
 const (
@@ -27,6 +29,7 @@ type decrypter struct {
 	mode             cipher.BlockMode
 	bufferedBlock    []byte
 	out              io.Writer
+	blockIndex       int
 }
 
 // PublicKeyFromPrivateKey generates the public key corresponding to a given
@@ -107,19 +110,24 @@ func newAESCBCDecrypter(key, iv []byte, out io.Writer) io.WriteCloser {
 
 // Write always buffers the decrypted data and writes it on the next call to Write() or Close()
 func (d *decrypter) Write(p []byte) (int, error) {
-	var n int
 	if d.hasBufferedBlock {
-		var err error
-		n, err = d.out.Write(d.bufferedBlock)
+		err := d.flushBuffer()
 		if err != nil {
-			return n, fmt.Errorf("error flushing buffered block: %w", err)
+			return -1, err
 		}
-		d.hasBufferedBlock = false
 	}
 
-	if len(p) == 0 {
-		return n, nil
+	if len(p) != 0 {
+		err := d.bufferData(p)
+		if err != nil {
+			return -1, err
+		}
 	}
+	return len(p), nil
+}
+
+func (d *decrypter) bufferData(p []byte) error {
+	log.Debugf("Buffering %d bytes of encrypted data", len(p))
 
 	if len(d.bufferedBlock) < len(p) {
 		d.bufferedBlock = make([]byte, len(p))
@@ -127,7 +135,7 @@ func (d *decrypter) Write(p []byte) (int, error) {
 		d.bufferedBlock = d.bufferedBlock[:len(p)]
 	}
 
-	err := func() (err error) {
+	return func() (err error) {
 		defer func() {
 			if r := recover(); r != nil {
 				err = fmt.Errorf("CryptBlocks paniced: %v", r)
@@ -138,25 +146,38 @@ func (d *decrypter) Write(p []byte) (int, error) {
 		d.hasBufferedBlock = true
 		return
 	}()
-	return n, err
 }
 
-func (d *decrypter) flushBufferWithoutPadding() (int, error) {
+func (d *decrypter) flushBuffer() error {
+	d.blockIndex += 1
+	log.Debugf("Block #%d - Writing out %d decrypted bytes", d.blockIndex, len(d.bufferedBlock))
+
+	_, err := d.out.Write(d.bufferedBlock)
+	if err != nil {
+		return fmt.Errorf("error flushing buffered block: %w", err)
+	}
+	d.hasBufferedBlock = false
+	return nil
+}
+
+func (d *decrypter) flushBufferWithoutPadding() error {
 	if !d.hasBufferedBlock {
-		return -1, nil
+		return nil
 	}
 
 	var err error
+	sizeBeforeUnpadding := len(d.bufferedBlock)
 	d.bufferedBlock, err = pkcs7Unpad(d.bufferedBlock, d.mode.BlockSize())
+	log.Debugf("Removing %d bytes of padding to the plain data", sizeBeforeUnpadding-len(d.bufferedBlock))
 	if err != nil {
-		return -1, fmt.Errorf("unable to unpad data: %w", err)
+		return fmt.Errorf("unable to unpad data: %w", err)
 	}
 
-	return d.Write(nil)
+	return d.flushBuffer()
 }
 
 func (d *decrypter) Close() error {
-	_, err := d.flushBufferWithoutPadding()
+	err := d.flushBufferWithoutPadding()
 
 	if v, ok := d.out.(io.WriteCloser); ok {
 		if err := v.Close(); err != nil {

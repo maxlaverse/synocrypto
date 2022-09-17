@@ -11,13 +11,15 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io"
+
+	"github.com/maxlaverse/synocrypto/pkg/log"
 )
 
 const (
 	// maxBlockSize is the maximum size an object can have. If the limit
 	// is cross, CloudSync complains about it and says it considers the file
-	// to be corrupted. This size seems to be 8192 but we're being conservative.
-	maxBlockSize = 4096
+	// to be corrupted.
+	maxBlockSize = 8192
 )
 
 // EncryptOnceWithPasswordAndSalt encrypts a single blob of data with
@@ -99,21 +101,22 @@ type encrypter struct {
 	mode             cipher.BlockMode
 	bufferedBlock    []byte
 	out              io.Writer
+	blockIndex       int
 }
 
-func (d *encrypter) Write(p []byte) (int, error) {
-	if len(p) == 0 {
-		return d.write(nil)
-	}
+func (e *encrypter) Write(p []byte) (int, error) {
+	return e.writeInChunks(p, maxBlockSize)
+}
 
+func (e *encrypter) writeInChunks(p []byte, size int) (int, error) {
 	written := 0
-	for start := 0; start < len(p); start += maxBlockSize {
-		end := start + maxBlockSize
+	for start := 0; start <= len(p); start += size {
+		end := start + size
 		if end > len(p) {
 			end = len(p)
 		}
 
-		n, err := d.write(p[start:end])
+		n, err := e.write(p[start:end])
 		written = written + n
 		if err != nil {
 			return written, err
@@ -122,66 +125,76 @@ func (d *encrypter) Write(p []byte) (int, error) {
 	return written, nil
 }
 
-func (d *encrypter) write(p []byte) (int, error) {
-	if d.hasBufferedBlock {
-		lastBlockEncrypted := make([]byte, len(d.bufferedBlock))
-
-		err := func() (err error) {
-			defer func() {
-				if r := recover(); r != nil {
-					err = fmt.Errorf("CryptBlocks paniced: %v", r)
-				}
-			}()
-
-			d.mode.CryptBlocks(lastBlockEncrypted, d.bufferedBlock)
-			return
-		}()
+func (e *encrypter) write(p []byte) (int, error) {
+	if e.hasBufferedBlock {
+		err := e.encryptAndFlushBuffer()
 		if err != nil {
-			return -1, fmt.Errorf("error crypting block: %w", err)
+			return -1, err
 		}
-
-		n, err := d.out.Write(lastBlockEncrypted)
-		if err != nil {
-			return n, fmt.Errorf("error flushing block: %w", err)
-		}
-		d.hasBufferedBlock = false
 	}
 
-	// We have to return len(p) instead of what was really written
-	// to the output, or io.Copy() returns 'short write' error.
-	if len(p) == 0 {
-		return len(p), nil
+	if len(p) != 0 {
+		e.bufferData(p)
 	}
-
-	if len(d.bufferedBlock) < len(p) {
-		d.bufferedBlock = make([]byte, len(p))
-	} else if len(d.bufferedBlock) > len(p) {
-		d.bufferedBlock = d.bufferedBlock[:len(p)]
-	}
-	copy(d.bufferedBlock, p)
-
-	d.hasBufferedBlock = true
 	return len(p), nil
 }
 
-func (d *encrypter) flushBufferWithPadding() (int, error) {
-	if !d.hasBufferedBlock {
-		return -1, nil
+func (e *encrypter) bufferData(p []byte) {
+	log.Debugf("Buffering %d bytes of plain data", len(p))
+	e.bufferedBlock = make([]byte, len(p))
+	copy(e.bufferedBlock, p)
+
+	e.hasBufferedBlock = true
+}
+
+func (e *encrypter) encryptAndFlushBuffer() error {
+	encryptedBlock := make([]byte, len(e.bufferedBlock))
+
+	err := func() (err error) {
+		defer func() {
+			if r := recover(); r != nil {
+				err = fmt.Errorf("CryptBlocks paniced: %v", r)
+			}
+		}()
+
+		e.mode.CryptBlocks(encryptedBlock, e.bufferedBlock)
+		return
+	}()
+	if err != nil {
+		return fmt.Errorf("error crypting block: %w", err)
+	}
+
+	e.blockIndex += 1
+	log.Debugf("Block #%d - Writting out %d encrypted bytes ", e.blockIndex, len(encryptedBlock))
+	_, err = e.out.Write(encryptedBlock)
+	if err != nil {
+		return fmt.Errorf("error flushing block: %w", err)
+	}
+
+	e.hasBufferedBlock = false
+	return nil
+}
+
+func (e *encrypter) encryptAndFlushBufferWithPadding() error {
+	if !e.hasBufferedBlock {
+		return nil
 	}
 
 	var err error
-	d.bufferedBlock, err = pkcs7Pad(d.bufferedBlock, d.mode.BlockSize())
-	if err != nil {
-		return -1, fmt.Errorf("unable to pad data: %w", err)
-	}
+	sizeBeforePadding := len(e.bufferedBlock)
+	e.bufferedBlock, err = pkcs7Pad(e.bufferedBlock, e.mode.BlockSize())
+	log.Debugf("Adding %d bytes of padding to the plain data", len(e.bufferedBlock)-sizeBeforePadding)
 
-	return d.Write(nil)
+	if err != nil {
+		return fmt.Errorf("unable to pad data: %w", err)
+	}
+	return e.encryptAndFlushBuffer()
 }
 
-func (d *encrypter) Close() error {
-	_, err := d.flushBufferWithPadding()
+func (e *encrypter) Close() error {
+	err := e.encryptAndFlushBufferWithPadding()
 
-	if v, ok := d.out.(io.WriteCloser); ok {
+	if v, ok := e.out.(io.WriteCloser); ok {
 		if err := v.Close(); err != nil {
 			return err
 		}
