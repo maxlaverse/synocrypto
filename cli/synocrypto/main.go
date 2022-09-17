@@ -20,7 +20,7 @@ func main() {
 	debugMode := false
 	app := &cli.App{
 		Name:  "synocrypto",
-		Usage: "A cli for decrypting Synology Cloud Sync files",
+		Usage: "A cli for encrypting and decrypting Synology Cloud Sync files",
 		Flags: []cli.Flag{&cli.BoolFlag{
 			Name:        "debug",
 			Value:       false,

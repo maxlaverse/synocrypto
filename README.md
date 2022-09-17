@@ -26,7 +26,7 @@ You can also download pre-compiled binaries from the [releases] page.
 ### Usage
 ```
 NAME:
-   synocrypto - A cli for decrypting Synology Cloud Sync files
+   synocrypto - A cli for encrypting and decrypting Synology Cloud Sync files
 
 USAGE:
    synocrypto [global options] command [command options] [arguments...]
